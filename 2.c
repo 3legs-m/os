@@ -1,4 +1,3 @@
-/* 头文件 */
 #include <unistd.h>
 #include <sys/wait.h>
 #include <stdio.h>
@@ -9,9 +8,8 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/stat.h>
-#include <dirent.h>             // readdir函数
+#include <dirent.h>             
 
-/* 宏定义 */
 #define IN 1
 #define OUT 0
 #define MAX_CMD 10
@@ -19,60 +17,55 @@
 #define MAX_CMD_LEN 100
 
 
-/* 全局变量 */
-int argc;                                       // 有效参数个数
-char* argv[MAX_CMD];                            // 参数数组
-char command[MAX_CMD][MAX_CMD_LEN];             // 参数数组
-char buf[BUFFSIZE];                             // 接受输入的参数数组
-char backupBuf[BUFFSIZE];                       // 参数数组的备份
-char curPath[BUFFSIZE];                         // 当前shell工作路径
-int i, j;                                       // 循环变量
-int commandNum;                                 // 已经输入指令数目
-char history[MAX_CMD][BUFFSIZE];                // 存放历史命令
+int argc;                                       // Effective number of parameters
+char* argv[MAX_CMD];                            // Parameter array
+char command[MAX_CMD][MAX_CMD_LEN];             // Parameter array
+char buf[BUFFSIZE];                             // Accept an array of input parameters
+char backupBuf[BUFFSIZE];                       // Backup of parameter arrays
+char curPath[BUFFSIZE];                         // shell path
+int i, j;                                       
+int commandNum;                                 
+char history[MAX_CMD][BUFFSIZE];                // Save history command
 
 
-int get_input(char buf[]);                      // 输入指令并存入buf数组
-void parse(char* buf);                          // 解析字符串
+int get_input(char buf[]);                      // Enter the command and store it in the buf array
+void parse(char* buf);                          // Parsing strings
 void do_cmd(int argc, char* argv[]);
-    int callCd(int argc);                       // 执行cd指令
-    int printHistory(char command[MAX_CMD][MAX_CMD_LEN]);   // 打印历史指令
-    // 重定向指令
-    int commandWithOutputRedi(char buf[BUFFSIZE]);          // 执行输出重定向
-    int commandWithInputRedi(char buf[BUFFSIZE]);           // 执行输入重定向命令
-    int commandWithReOutputRedi(char buf[BUFFSIZE]);        // 执行输出重定向追加写
-    int commandWithPipe(char buf[BUFFSIZE]);                // 执行管道命令
+    int callCd(int argc);                       
+    int printHistory(char command[MAX_CMD][MAX_CMD_LEN]);   // Print history command
+    // Redirect command
+    int commandWithOutputRedi(char buf[BUFFSIZE]);          // Perform output redirection
+    int commandWithInputRedi(char buf[BUFFSIZE]);           // Execute the input redirect command
+    int commandWithReOutputRedi(char buf[BUFFSIZE]);        // Execute output redirect append write
+    int commandWithPipe(char buf[BUFFSIZE]);                // Execute pipeline commands
     int commandInBackground(char buf[BUFFSIZE]);
-    void myTop();                                           // 执行mytop指令
+    void myTop();                                           // Execute the mytop command
 
 
-/* 函数定义 */
-/* get_input接受输入的字符并存入buf数组中 */
+/* Function Definition */
+/* get_input takes the input characters and stores them in the buf array */
 int get_input(char buf[]) {
-    // buf数组初始化
+    // buf array initialization
     memset(buf, 0x00, BUFFSIZE);
     memset(backupBuf, 0x00, BUFFSIZE);        
 
     fgets(buf, BUFFSIZE, stdin);
-    // 去除fgets带来的末尾\n字符
+    // Remove the \n character at the end of fgets
     buf[strlen(buf) - 1] = '\0';
     return strlen(buf);
 }
 
 void parse(char* buf) {
-    // 初始化argv数组和argc
+    // Remove the \n character at the end of fgets
     for (i = 0; i < MAX_CMD; i++) {
         argv[i] = NULL;
         for (j = 0; j < MAX_CMD_LEN; j++)
             command[i][j] = '\0';
     }
     argc = 0;
-    // 下列操作改变了buf数组, 为buf数组做个备份
+    // The following operation changes the buf array, make a backup for the buf array
     strcpy(backupBuf, buf);
-    /** 构建command数组
-     *  即若输入为"ls -a"
-     *  strcmp(command[0], "ls") == 0 成立且
-     *  strcmp(command[1], "-a") == 0 成立
-     */  
+
     int len = strlen(buf);
     for (i = 0, j = 0; i < len; ++i) {
         if (buf[i] != ' ') {
@@ -89,10 +82,7 @@ void parse(char* buf) {
         command[argc][j] = '\0';
     }
 
-    /** 构建argv数组
-     *  即若输入buf为"ls -a"
-     *  strcmp(argv[0], "ls") == 0 成立且
-     *  strcmp(argv[1], "-a") == 0 成立*/
+
     argc = 0;
     int flg = OUT;
     for (i = 0; buf[i] != '\0'; i++) {
@@ -109,8 +99,8 @@ void parse(char* buf) {
 
 void do_cmd(int argc, char* argv[]) {
     pid_t pid;
-    /* 识别program命令 */
-    // 识别重定向输出命令
+    /* Identify program commands */
+    // Identify redirected output commands
     for (j = 0; j < MAX_CMD; j++) {
         if (strcmp(command[j], ">") == 0) {
             strcpy(buf, backupBuf);
@@ -118,7 +108,7 @@ void do_cmd(int argc, char* argv[]) {
             return;
         }
     }
-    // 识别输入重定向
+    // Identify input redirects
     for (j = 0; j < MAX_CMD; j++) {
         if (strcmp(command[i], "<") == 0) {
             strcpy(buf, backupBuf);
@@ -126,7 +116,7 @@ void do_cmd(int argc, char* argv[]) {
             return;
         }
     }
-    // 识别追加写重定向
+    // Identify appending write redirects
     for (j = 0; j < MAX_CMD; j++) {
         if (strcmp(command[j], ">>") == 0) {
             strcpy(buf, backupBuf);
@@ -135,7 +125,7 @@ void do_cmd(int argc, char* argv[]) {
         }
     }
 
-    // 识别管道命令
+    // Identify pipeline commands
     for (j = 0; j < MAX_CMD; j++) {
         if (strcmp(command[j], "|") == 0) {
             strcpy(buf, backupBuf);
@@ -144,7 +134,7 @@ void do_cmd(int argc, char* argv[]) {
         }
     }
 
-    // 识别后台运行命令
+    // Identify background running commands
     for (j = 0; j < MAX_CMD; j++) {
         if (strcmp(command[j], "&") == 0) {
             strcpy(buf, backupBuf);
@@ -157,7 +147,7 @@ void do_cmd(int argc, char* argv[]) {
 
 
 
-    /* 识别shell内置命令 */
+    /* Identify shell built-in commands */
     if (strcmp(command[0], "cd") == 0) {
         int res = callCd(argc);
         if (!res) printf("cd指令输入错误!");
@@ -170,26 +160,19 @@ void do_cmd(int argc, char* argv[]) {
         exit(0);
     } else {
         switch(pid = fork()) {
-            // fork子进程失败
-            case -1:
+            // fork子进程失败            case -1:
                 printf("创建子进程未成功");
                 return;
-            // 处理子进程
             case 0:
-                {   /* 函数说明：execvp()会从PATH 环境变量所指的目录中查找符合参数file 的文件名, 找到后便执行该文件, 
-                     * 然后将第二个参数argv 传给该欲执行的文件。
-                     * 返回值：如果执行成功则函数不会返回, 执行失败则直接返回-1, 失败原因存于errno 中. 
-                     * */
+                {   
                     execvp(argv[0], argv);
-                    // 代码健壮性: 如果子进程未被成功执行, 则报错
                     printf("%s: 命令输入错误\n", argv[0]);
-                    // exit函数终止当前进程, 括号内参数为1时, 会像操作系统报告该进程因异常而终止
                     exit(1);
                 }
             default: {
                     int status;
-                    waitpid(pid, &status, 0);      // 等待子进程返回
-                    int err = WEXITSTATUS(status); // 读取子进程的返回码
+                    waitpid(pid, &status, 0);      
+                    int err = WEXITSTATUS(status); 
 
                     if (err) { 
                         printf("Error: %s\n", strerror(err));
@@ -256,7 +239,7 @@ int commandWithOutputRedi(char buf[BUFFSIZE]) {
         }
     }
 
-    // 指令分割, outFile为输出文件, buf为重定向符号前的命令
+    // command split, outFile is the output file, buf is the command before the redirect symbol
     for (j = 0; j < strlen(buf); j++) {
         if (buf[j] == '>') {
             break;
@@ -264,7 +247,7 @@ int commandWithOutputRedi(char buf[BUFFSIZE]) {
     }
     buf[j - 1] = '\0';
     buf[j] = '\0';
-    // 解析指令
+    // Parsing Instructions
     parse(buf);
     pid_t pid;
     switch(pid = fork()) {
@@ -272,12 +255,12 @@ int commandWithOutputRedi(char buf[BUFFSIZE]) {
             printf("创建子进程未成功");
             return 0;
         }
-        // 处理子进程:
+        // Processing sub-processes:
         case 0: {
-            // 完成输出重定向
+            // Complete output redirection
             int fd;
             fd = open(outFile, O_WRONLY|O_CREAT|O_TRUNC, 7777);
-            // 文件打开失败
+            // File open failure
             if (fd < 0) {
                 exit(1);
             }
@@ -286,15 +269,13 @@ int commandWithOutputRedi(char buf[BUFFSIZE]) {
             if (fd != STDOUT_FILENO) {
                 close(fd);
             }
-            // 代码健壮性: 如果子进程未被成功执行, 则报错
             printf("%s: 命令输入错误\n", argv[0]);
-            // exit函数终止当前进程, 括号内参数为1时, 会像操作系统报告该进程因异常而终止
             exit(1);
         }
         default: {
             int status;
-            waitpid(pid, &status, 0);       // 等待子进程返回
-            int err = WEXITSTATUS(status);  // 读取子进程的返回码
+            waitpid(pid, &status, 0);       // Wait for the sub-process to return
+            int err = WEXITSTATUS(status);  // Read the return code of the sub process
             if (err) { 
                 printf("Error: %s\n", strerror(err));
             } 
@@ -315,7 +296,7 @@ int commandWithInputRedi(char buf[BUFFSIZE]) {
         }
     }
     if (RediNum != 1) {
-        printf("输入重定向指令输入有误!");
+        printf("Input redirection command was entered incorrectly!");
         return 0;
     }
 
@@ -324,13 +305,12 @@ int commandWithInputRedi(char buf[BUFFSIZE]) {
             if (i + 1 < argc) {
                 strcpy(inFile, command[i + 1]);
             } else {
-                printf("缺少输入指令!");
+                printf("Missing input command!");
                 return 0;
             }
         }
     }
 
-    // 指令分割, InFile为输出文件, buf为重定向符号前的命令
     for (j = 0; j < strlen(buf); j++) {
         if (buf[j] == '<') {
             break;
@@ -342,15 +322,15 @@ int commandWithInputRedi(char buf[BUFFSIZE]) {
     pid_t pid;
     switch(pid = fork()) {
         case -1: {
-            printf("创建子进程未成功");
+            printf("Create sub-process unsuccessful");
             return 0;
         }
-        // 处理子进程:
+        // Processing sub-processes:
         case 0: {
-            // 完成输入重定向
+            // Complete input redirection
             int fd;
             fd = open(inFile, O_RDONLY, 7777);
-            // 文件打开失败
+            // File open failure
             if (fd < 0) {
                 exit(1);
             }
@@ -359,15 +339,13 @@ int commandWithInputRedi(char buf[BUFFSIZE]) {
             if (fd != STDIN_FILENO) {
                 close(fd);
             }
-            // 代码健壮性: 如果子进程未被成功执行, 则报错
             printf("%s: 命令输入错误\n", argv[0]);
-            // exit函数终止当前进程, 括号内参数为1时, 会像操作系统报告该进程因异常而终止
             exit(1);
         }
         default: {
             int status;
-            waitpid(pid, &status, 0);       // 等待子进程返回
-            int err = WEXITSTATUS(status);  // 读取子进程的返回码
+            waitpid(pid, &status, 0);       //Wait for the sub-process to return
+            int err = WEXITSTATUS(status);  // Read the return code of the child process
             if (err) { 
                 printf("Error: %s\n", strerror(err));
             } 
@@ -389,7 +367,7 @@ int commandWithReOutputRedi(char buf[BUFFSIZE]) {
         }
     }
     if (RediNum != 1) {
-        printf("追加输出重定向指令输入有误!");
+        printf("Wrong input for the Append Output Redirect command!");
         return 0;
     }
 
@@ -398,13 +376,13 @@ int commandWithReOutputRedi(char buf[BUFFSIZE]) {
             if (i + 1 < argc) {
                 strcpy(reOutFile, command[i + 1]);
             } else {
-                printf("缺少输出文件!");
+                printf("Missing output file!");
                 return 0;
             }
         }
     }
 
-    // 指令分割, outFile为输出文件, buf为重定向符号前的命令
+
     for (j = 0; j + 2 < strlen(buf); j++) {
         if (buf[j] == '>' && buf[j + 1] == '>' 
             && buf[j + 2] == ' ') {
@@ -413,20 +391,19 @@ int commandWithReOutputRedi(char buf[BUFFSIZE]) {
     }
     buf[j - 1] = '\0';
     buf[j] = '\0';
-    // 解析指令
+
     parse(buf);
     pid_t pid;
     switch(pid = fork()) {
         case -1: {
-            printf("创建子进程未成功");
+            printf("Create sub-process unsuccessful");
             return 0;
         }
-        // 处理子进程:
+
         case 0: {
-            // 完成输出重定向
+
             int fd;
             fd = open(reOutFile, O_WRONLY|O_APPEND|O_CREAT|O_APPEND, 7777);
-            // 文件打开失败
             if (fd < 0) {
                 exit(1);
             }
@@ -435,15 +412,13 @@ int commandWithReOutputRedi(char buf[BUFFSIZE]) {
             if (fd != STDOUT_FILENO) {
                 close(fd);
             }
-            // 代码健壮性: 如果子进程未被成功执行, 则报错
             printf("%s: 命令输入错误\n", argv[0]);
-            // exit函数终止当前进程, 括号内参数为1时, 会像操作系统报告该进程因异常而终止
             exit(1);
         }
         default: {
             int status;
-            waitpid(pid, &status, 0);       // 等待子进程返回
-            int err = WEXITSTATUS(status);  // 读取子进程的返回码
+            waitpid(pid, &status, 0);      
+            int err = WEXITSTATUS(status); 
             if (err) { 
                 printf("Error: %s\n", strerror(err));
             } 
@@ -453,14 +428,12 @@ int commandWithReOutputRedi(char buf[BUFFSIZE]) {
 
 
 int commandWithPipe(char buf[BUFFSIZE]) {
-    // 获取管道符号的位置索引
     for(j = 0; buf[j] != '\0'; j++) {
         if (buf[j] == '|')
             break;
     }
 
-    // 分离指令, 将管道符号前后的指令存放在两个数组中
-    // outputBuf存放管道前的命令, inputBuf存放管道后的命令
+
     char outputBuf[j];
     memset(outputBuf, 0x00, j);
     char inputBuf[strlen(buf) - j];
@@ -487,27 +460,25 @@ int commandWithPipe(char buf[BUFFSIZE]) {
     }
 
 
-    if (pid == 0) {                     // 子进程写管道
-        close(pd[0]);                   // 关闭子进程的读端
-        dup2(pd[1], STDOUT_FILENO);     // 将子进程的写端作为标准输出
+    if (pid == 0) {                    
+        close(pd[0]);                   
+        dup2(pd[1], STDOUT_FILENO);     
         parse(outputBuf);
         execvp(argv[0], argv);
         if (pd[1] != STDOUT_FILENO) {
             close(pd[1]);
         }
-    }else {                              // 父进程读管道
-        /** 关键代码
-         *  子进程写管道完毕后再执行父进程读管道, 所以需要用wait函数等待子进程返回后再操作
-         */
+    }else {                              
+
         int status;
-        waitpid(pid, &status, 0);       // 等待子进程返回
-        int err = WEXITSTATUS(status);  // 读取子进程的返回码
+        waitpid(pid, &status, 0);       
+        int err = WEXITSTATUS(status);  
         if (err) { 
             printf("Error: %s\n", strerror(err));
         }
 
-        close(pd[1]);                    // 关闭父进程管道的写端
-        dup2(pd[0], STDIN_FILENO);       // 管道读端读到的重定向为标准输入
+        close(pd[1]);                    
+        dup2(pd[0], STDIN_FILENO);       
         parse(inputBuf);
         execvp(argv[0], argv);
         if (pd[0] != STDIN_FILENO) {
@@ -539,14 +510,12 @@ int commandInBackground(char buf[BUFFSIZE]) {
     }
 
     if (pid == 0) {
-        // 将stdin、stdout、stderr重定向到/dev/null
         freopen( "/dev/null", "w", stdout );
         freopen( "/dev/null", "r", stdin ); 
         signal(SIGCHLD,SIG_IGN);
         parse(backgroundBuf);
         execvp(argv[0], argv);
         printf("%s: 命令输入错误\n", argv[0]);
-        // exit函数终止当前进程, 括号内参数为1时, 会像操作系统报告该进程因异常而终止
         exit(1);
     }else {
         exit(0);
@@ -555,25 +524,25 @@ int commandInBackground(char buf[BUFFSIZE]) {
 
 
 void myTop() {
-    FILE *fp = NULL;                    // 文件指针
+    FILE *fp = NULL;                    
     char buff[255];
 
-    /* 获取内容一: 
-       总体内存大小，
-       空闲内存大小，
-       缓存大小。 */
-    fp = fopen("/proc/meminfo", "r");   // 以只读方式打开meminfo文件
-    fgets(buff, 255, (FILE*)fp);        // 读取meminfo文件内容进buff
+    /* Get content i: 
+       Overall memory size, the
+       free memory size.
+       Cache size */
+    fp = fopen("/proc/meminfo", "r");   
+    fgets(buff, 255, (FILE*)fp);        
     fclose(fp);
 
-    // 获取 pagesize
+    // Get pagesize
     int i = 0, pagesize = 0;
     while (buff[i] != ' ') {
         pagesize = 10 * pagesize + buff[i] - 48;
         i++;
     }
 
-    // 获取 页总数 total
+    // Get the total number of pages total
     i++;
     int total = 0;
     while (buff[i] != ' ') {
@@ -581,7 +550,7 @@ void myTop() {
         i++;
     }
 
-    // 获取空闲页数 free
+    // Get the number of free pages free
     i++;
     int free = 0;
     while (buff[i] != ' ') {
@@ -589,7 +558,7 @@ void myTop() {
         i++;
     }
 
-    // 获取最大页数量largest
+    // Get the maximum number of pages largest
     i++;
     int largest = 0;
     while (buff[i] != ' ') {
@@ -597,7 +566,7 @@ void myTop() {
         i++;
     }
 
-    // 获取缓存页数量 cached
+    // Get the number of cached pages cached
     i++;
     int cached = 0;
     while (buff[i] >= '0' && buff[i] <= '9') {
@@ -605,26 +574,23 @@ void myTop() {
         i++;
     }
 
-    // 总体内存大小 = (pagesize * total) / 1024 单位 KB
     int totalMemory  = pagesize / 1024 * total;
-    // 空闲内存大小 = pagesize * free) / 1024 单位 KB
     int freeMemory   = pagesize / 1024 * free;
-    // 缓存大小    = (pagesize * cached) / 1024 单位 KB
     int cachedMemory = pagesize / 1024 * cached;
 
     printf("totalMemory  is %d KB\n", totalMemory);
     printf("freeMemory   is %d KB\n", freeMemory);
     printf("cachedMemory is %d KB\n", cachedMemory);
 
-    /* 2. 获取内容2
-        进程和任务数量
+    /* 2. Get Content 2
+        Number of processes and tasks
      */
-    fp = fopen("/proc/kinfo", "r");     // 以只读方式打开meminfo文件
-    memset(buff, 0x00, 255);            // 格式化buff字符串
-    fgets(buff, 255, (FILE*)fp);        // 读取meminfo文件内容进buff
+    fp = fopen("/proc/kinfo", "r");     
+    memset(buff, 0x00, 255);           
+    fgets(buff, 255, (FILE*)fp);        
     fclose(fp);
 
-    // 获取进程数量
+    // Get the number of processes
     int processNumber = 0;
     i = 0;
     while (buff[i] != ' ') {
@@ -633,7 +599,7 @@ void myTop() {
     }
     printf("processNumber = %d\n", processNumber);
 
-    // 获取任务数量
+    // Get the number of tasks
     i++;
     int tasksNumber = 0;
     while (buff[i] >= '0' && buff[i] <= '9') {
@@ -643,22 +609,22 @@ void myTop() {
     printf("tasksNumber = %d\n", tasksNumber);
 
 
-    // /* 3. 获取psinfo中的内容 */
+    // /* 3. get the contents of psinfo */
     DIR *d;
     struct dirent *dir;
     d = opendir("/proc");
     int totalTicks = 0, freeTicks = 0;
     if (d) {
-        while ((dir = readdir(d)) != NULL) {                   // 遍历proc文件夹
+        while ((dir = readdir(d)) != NULL) {                   // Traversing the proc folder
             if (strcmp(dir->d_name, ".") != 0 && 
                 strcmp(dir->d_name, "..") != 0) {
                     char path[255];
                     memset(path, 0x00, 255);
                     strcpy(path, "/proc/");
-                    strcat(path, dir->d_name);          // 连接成为完成路径名
+                    strcat(path, dir->d_name);          // The connection becomes the completion pathname
                     struct stat s;
                     if (stat (path, &s) == 0) {
-                        if (S_ISDIR(s.st_mode)) {       // 判断为目录
+                        if (S_ISDIR(s.st_mode)) {       // Judgment as a directory
                             strcat(path, "/psinfo");
 
                             FILE* fp = fopen(path, "r");
@@ -667,7 +633,7 @@ void myTop() {
                             fgets(buf, 255, (FILE*)fp);
                             fclose(fp);
 
-                            // 获取ticks和进程状态
+
                             int j = 0;
                             for (i = 0; i < 4;) {
                                 for (j = 0; j < 255; j++) {
@@ -675,9 +641,9 @@ void myTop() {
                                     if (buf[j] == ' ') i++;
                                 }
                             }
-                            // 循环结束, buf[j]为进程的状态, 共有S, W, R三种状态.
+
                             int k = j + 1;
-                            for (i = 0; i < 3;) {               // 循环结束后k指向ticks位置
+                            for (i = 0; i < 3;) {              
                                 for (k = j + 1; k < 255; k++) {
                                     if (i >= 3) break;
                                     if (buf[k] == ' ') i++;
@@ -704,12 +670,12 @@ void myTop() {
 }
 
 
-/* main函数 */
+/* main function */
 int main() {
-    // while循环
+    // while loop
     while(1) {
-        printf("[myshell]$ ");
-        // 输入字符存入buf数组, 如果输入字符数为0, 则跳过此次循环
+        printf("[zlfshell]$ ");
+        // Input characters are stored in buf array, if the number of input characters is 0, then the loop is skipped
         if (get_input(buf) == 0)
             continue;
         strcpy(history[commandNum++], buf);
